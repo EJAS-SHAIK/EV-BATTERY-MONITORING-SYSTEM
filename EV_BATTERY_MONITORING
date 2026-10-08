@@ -1,0 +1,93 @@
+// EV Battery Monitoring System
+// Arduino UNO + TMP36 + potentiometers + LEDs + buzzer
+
+const int tempPin = A0;
+const int voltagePin = A1;
+const int currentPin = A2;
+
+const int greenLED = 8;
+const int redLED = 9;
+const int buzzer = 10;
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(greenLED, OUTPUT);
+  pinMode(redLED, OUTPUT);
+  pinMode(buzzer, OUTPUT);
+}
+
+void loop() {
+
+  // Read sensors
+  int tempRaw = analogRead(tempPin);
+  int voltageRaw = analogRead(voltagePin);
+  int currentRaw = analogRead(currentPin);
+
+  // TMP36 temperature calculation
+  float tempVoltage = tempRaw * (5.0 / 1023.0);
+  float temperature = (tempVoltage - 0.5) * 100.0;
+
+  // Simulated 48V EV battery
+  float batteryVoltage = voltageRaw * (60.0 / 1023.0);
+
+  // Simulated current: 0-20A
+  float current = currentRaw * (20.0 / 1023.0);
+
+  // Estimate SOC for a 48V battery
+  float soc = ((batteryVoltage - 42.0) / (54.0 - 42.0)) * 100.0;
+
+  if (soc > 100) soc = 100;
+  if (soc < 0) soc = 0;
+
+  Serial.println("-------------------------");
+  Serial.println("EV BATTERY MONITOR");
+  Serial.print("Voltage: ");
+  Serial.print(batteryVoltage);
+  Serial.println(" V");
+
+  Serial.print("Current: ");
+  Serial.print(current);
+  Serial.println(" A");
+
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.println(" C");
+
+  Serial.print("SOC: ");
+  Serial.print(soc);
+  Serial.println(" %");
+
+  // Safety conditions
+  bool warning = false;
+
+  if (temperature >= 50) {
+    warning = true;
+    Serial.println("WARNING: HIGH TEMPERATURE");
+  }
+
+  if (batteryVoltage >= 54) {
+    warning = true;
+    Serial.println("WARNING: OVER VOLTAGE");
+  }
+
+  if (batteryVoltage <= 42) {
+    warning = true;
+    Serial.println("WARNING: LOW BATTERY");
+  }
+
+  // Status indication
+  if (warning) {
+    digitalWrite(greenLED, LOW);
+    digitalWrite(redLED, HIGH);
+    tone(buzzer, 1000);
+  } 
+  else {
+    digitalWrite(greenLED, HIGH);
+    digitalWrite(redLED, LOW);
+    noTone(buzzer);
+    Serial.println("STATUS: NORMAL");
+  }
+
+  delay(1000);
+}
